@@ -2,10 +2,11 @@ import React from 'react';
 import { View, StyleSheet, Image } from 'react-native';
 import { Button, useTheme } from 'react-native-paper';
 import { Text } from 'react-native-paper';
+import { useNavigation } from '@react-navigation/native';
 
 export default function App() {
   const theme = useTheme(); // Usa el tema oscuro de Paper
-
+  const navigation = useNavigation();
   return (
     <View style={[styles.container, { backgroundColor: theme.colors.background }]}>
       {/* Imagen del logo */}
@@ -28,7 +29,7 @@ export default function App() {
       <Button 
         mode="contained" 
         style={[styles.button, { backgroundColor: 'rgb(12, 69, 122)' }]} 
-        onPress={() => console.log('Buscar')}
+        onPress={() => navigation.navigate('Search')}
         labelStyle={[styles.buttonLabel, { color: 'white' }]}
         icon={'magnify'}
       >

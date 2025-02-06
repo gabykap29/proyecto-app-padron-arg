@@ -21,8 +21,27 @@ import { useNavigation } from "@react-navigation/native";
 import { BackHandler } from "react-native";
 import { findPerson } from "../db/sqlite.config";
 import { StatusBar } from "react-native";
+import { Keyboard } from "react-native";
 
 export default function SearchScreen() {
+
+  const [keyboardVisible, setKeyboardVisible] = useState(false);
+  
+  useEffect(() => {
+    const keyboardDidShowListener = Keyboard.addListener("keyboardDidShow", () => {
+      setKeyboardVisible(true);
+    });
+  
+    const keyboardDidHideListener = Keyboard.addListener("keyboardDidHide", () => {
+      setKeyboardVisible(false);
+    });
+  
+    return () => {
+      keyboardDidShowListener.remove();
+      keyboardDidHideListener.remove();
+    };
+  }, []);
+  
 
 
   useEffect(() => {
@@ -119,12 +138,14 @@ export default function SearchScreen() {
   return (
     <KeyboardAvoidingView
       behavior={Platform.OS === "ios" ? "padding" : "height"}
-      style={[styles.flexContainer, { backgroundColor: theme.colors.background }]}
-      keyboardVerticalOffset={Platform.OS === "ios" ? 50 : 0}
+      style={[styles.flexContainer, { backgroundColor: 'black' }]}
+      keyboardVerticalOffset={Platform.OS === "ios" ? 50 : - 50}
     >
+      <View style={{ flex: 1 }}>
       <FlatList
         data={[{ id: "header", type: "header" }, ...resultados]}
         keyExtractor={(item, index) => item.id || index.toString()}
+        contentContainerStyle={{ flexGrow: 1, paddingBottom: keyboardVisible ? 20 : 0 }}
         ListHeaderComponent={
           <Card style={styles.card} key={filter.dni}>
             <Card.Title
@@ -248,6 +269,7 @@ export default function SearchScreen() {
           );
         }}
       />
+      </View>
     </KeyboardAvoidingView>
   );
 }

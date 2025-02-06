@@ -19,7 +19,7 @@ export default function App() {
       <Button 
         mode="contained" 
         style={[styles.button, { backgroundColor: '#3498db' }]} 
-        onPress={() => console.log('Cargar')}
+        onPress={() => navigation.navigate('Create')}
         labelStyle={[styles.buttonLabel, { color: 'white' }]}
         icon="cloud-upload" 
       >

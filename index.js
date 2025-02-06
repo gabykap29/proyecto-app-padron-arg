@@ -13,6 +13,7 @@ const theme = {
     accent: '#f1c40f',
     secondary: '#f39c12',
     error: '#e74c3c',
+    backgraund: '#2c3e50',
   }
 };
 
@@ -23,9 +24,8 @@ export default function Main() {
     <PaperProvider theme={theme}>
     <NavigationContainer>
     <Stack.Navigator screenOptions={{ headerShown: false }}>
-    <Stack.Screen name="Search" component={SearchScreen} />
     <Stack.Screen name="Home" component={App}  />
-
+    <Stack.Screen name="Search" component={SearchScreen} />
     </Stack.Navigator>
     </NavigationContainer>
     </PaperProvider>

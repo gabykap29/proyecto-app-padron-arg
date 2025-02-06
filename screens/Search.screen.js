@@ -285,6 +285,7 @@ const styles = StyleSheet.create({
     marginTop: 10,
     color: "gray",
   },
+  
   resultadoCard: {
     marginTop: 10,
     paddingTop: 10,

@@ -1,37 +1,55 @@
-import React from 'react';
-import { View, StyleSheet, Image } from 'react-native';
-import { Button, useTheme } from 'react-native-paper';
-import { Text } from 'react-native-paper';
-import { useNavigation } from '@react-navigation/native';
+import React, { useEffect } from "react";
+import { View, StyleSheet, Image, Alert } from "react-native";
+import { Button, useTheme, Text } from "react-native-paper";
+import { useNavigation } from "@react-navigation/native";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 
 export default function App() {
-  const theme = useTheme(); // Usa el tema oscuro de Paper
+  const theme = useTheme(); 
   const navigation = useNavigation();
+
+  useEffect(() => {
+    const checkFirstTime = async () => {
+      try {
+        const firstLaunch = await AsyncStorage.getItem("firstLaunch");
+        if (firstLaunch === null) {
+          Alert.alert(
+            "Información Importante",
+            "Si es la primera vez que instala la app o la reinstaló, su primera búsqueda puede tardar unos momentos. La base de datos se copiará en su dispositivo.",
+            [{ text: "Entendido" }]
+          );
+          await AsyncStorage.setItem("firstLaunch", "true"); // Marca como vista la alerta
+        }
+      } catch (error) {
+        console.error("Error al verificar el primer inicio:", error);
+      }
+    };
+
+    checkFirstTime();
+  }, []);
+
   return (
     <View style={[styles.container, { backgroundColor: theme.colors.background }]}>
-      {/* Imagen del logo */}
-      <Image source={require('./assets/sgi.png')} style={styles.logo} />
+      <Image source={require("./assets/sgi.png")} style={styles.logo} />
       
-      <Text variant="displayLarge" style={styles.title}>
-        Padrón ARG
-      </Text>
+      <Text variant="displayLarge" style={styles.title}>Padrón ARG</Text>
 
       <Button 
         mode="contained" 
-        style={[styles.button, { backgroundColor: '#3498db' }]} 
-        onPress={() => navigation.navigate('Create')}
-        labelStyle={[styles.buttonLabel, { color: 'white' }]}
-        icon="cloud-upload" 
+        style={[styles.button, { backgroundColor: "#3498db" }]} 
+        onPress={() => navigation.navigate("Create")}
+        labelStyle={[styles.buttonLabel, { color: "white" }]}
+        icon="cloud-upload"
       >
         Cargar Datos
       </Button>
 
       <Button 
         mode="contained" 
-        style={[styles.button, { backgroundColor: 'rgb(12, 69, 122)' }]} 
-        onPress={() => navigation.navigate('Search')}
-        labelStyle={[styles.buttonLabel, { color: 'white' }]}
-        icon={'magnify'}
+        style={[styles.button, { backgroundColor: "rgb(12, 69, 122)" }]} 
+        onPress={() => navigation.navigate("Search")}
+        labelStyle={[styles.buttonLabel, { color: "white" }]}
+        icon="magnify"
       >
         Buscar Datos
       </Button>
@@ -42,31 +60,31 @@ export default function App() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
+    justifyContent: "center",
+    alignItems: "center",
     padding: 20,
-    paddingTop: 50, // Añadir espacio para el logo
+    paddingTop: 50,
   },
   logo: {
-    width: 100,  // Ajusta el tamaño del logo según sea necesario
-    height: 100, // Ajusta el tamaño del logo según sea necesario
-    marginBottom: 20, // Espacio debajo del logo
+    width: 100,
+    height: 100,
+    marginBottom: 20,
   },
   title: {
     marginBottom: 30,
-    fontWeight: 'bold',
-    color: 'white',
-    fontSize: 32, // Tamaño de fuente para mejor legibilidad
+    fontWeight: "bold",
+    color: "white",
+    fontSize: 32,
   },
   button: {
-    width: '60%',
+    width: "60%",
     marginBottom: 20,
     padding: 12,
-    elevation: 5, // Sombra para profundidad
-    alignItems: 'center', // Asegura que el texto esté centrado en el botón
+    elevation: 5,
+    alignItems: "center",
   },
   buttonLabel: {
-    fontWeight: 'bold', // Etiquetas de botones más destacadas
-    textTransform: 'uppercase', // Hacer que los textos sean más llamativos
+    fontWeight: "bold",
+    textTransform: "uppercase",
   },
 });

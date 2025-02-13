@@ -4,7 +4,7 @@
     "slug": "PadronARG",
     "version": "1.0.0",
     "orientation": "portrait",
-    "icon": "./assets/sgi.png",
+    "icon": "./assets/iconApp.png",
     "userInterfaceStyle": "light",
     "newArchEnabled": true,
     "splash": {
@@ -16,7 +16,11 @@
       "**/*"
     ],
     "ios": {
-      "supportsTablet": true
+      "supportsTablet": true,
+      "bundleIdentifier": "com.GabrielAcosta.PadronARG",
+      "infoPlist": {
+        "ITSAppUsesNonExemptEncryption": false
+      }
     },
     "android": {
       "adaptiveIcon": {
@@ -24,10 +28,12 @@
         "backgroundColor": "#ffffff",
         "permissions": [
           "READ_EXTERNAL_STORAGE",
+          "WRITE_EXTERNAL_STORAGE",
+          "READ_EXTERNAL_STORAGE",
           "WRITE_EXTERNAL_STORAGE"
         ]
       },
-      "package": "com.anonymous.PadronARG"
+      "package": "com.GabrielAcosta.PadronARG"
     },
     "web": {
       "favicon": "./assets/favicon.png"
@@ -39,6 +45,12 @@
       "eas": {
         "projectId": "5e201922-30ed-41be-b937-b96100e4cbd0"
       }
+    },
+    "runtimeVersion": {
+      "policy": "appVersion"
+    },
+    "updates": {
+      "url": "https://u.expo.dev/5e201922-30ed-41be-b937-b96100e4cbd0"
     }
   }
 }

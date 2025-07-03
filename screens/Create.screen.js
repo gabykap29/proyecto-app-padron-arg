@@ -11,6 +11,7 @@ export default function CreateEditPersonScreen() {
     names: "",
     dni: "",
     clase: "",
+    alternative_address: "",
     address: "",
     locality: "",
     province: "",
@@ -41,6 +42,7 @@ export default function CreateEditPersonScreen() {
             names: "",
             clase: "",
             address: "",
+            alternative_address: "",
             locality: "",
             province: "",
             work: ""
@@ -108,6 +110,13 @@ export default function CreateEditPersonScreen() {
               onChangeText={text => handleChange("clase", text)}
               style={styles.input}
               keyboardType="numeric"
+              mode="outlined"
+            />
+            <TextInput
+              label="Dirección Alternativa"
+              value={person.alternativeAddress}
+              onChangeText={text => handleChange("alternativeAddress", text)}
+              style={styles.input}
               mode="outlined"
             />
             <TextInput

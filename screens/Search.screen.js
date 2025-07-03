@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef } from "react";
 import {
   View,
   StyleSheet,
@@ -6,6 +6,8 @@ import {
   KeyboardAvoidingView,
   Platform,
   ToastAndroid,
+  Animated,
+  Dimensions,
 } from "react-native";
 import {
   TextInput,
@@ -14,18 +16,23 @@ import {
   Card,
   Divider,
   Text,
-  ActivityIndicator
+  ActivityIndicator,
+  IconButton,
+  Surface,
+  Badge,
 } from "react-native-paper";
-import * as Clipboard from "expo-clipboard"; // Importar portapapeles
+import * as Clipboard from "expo-clipboard";
 import { useNavigation } from "@react-navigation/native";
 import { BackHandler } from "react-native";
 import { findPerson } from "../db/sqlite.config";
 import { StatusBar } from "react-native";
 import { Keyboard } from "react-native";
+import { ScrollView } from "react-native";
 
 export default function SearchScreen() {
-
   const [keyboardVisible, setKeyboardVisible] = useState(false);
+  const slideAnimation = useRef(new Animated.Value(0)).current;
+  const scaleAnimation = useRef(new Animated.Value(1)).current;
   
   useEffect(() => {
     const keyboardDidShowListener = Keyboard.addListener("keyboardDidShow", () => {
@@ -41,22 +48,20 @@ export default function SearchScreen() {
       keyboardDidHideListener.remove();
     };
   }, []);
-  
-
 
   useEffect(() => {
     StatusBar.setBarStyle("light-content");
-    StatusBar.setBackgroundColor(theme.colors.background);
-    StatusBar.setTranslucent(true); // Esto elimina el espacio blanco bajo el StatusBar
+    StatusBar.setBackgroundColor("#0f172a");
+    StatusBar.setTranslucent(false);
   }, []);
-  
 
   const theme = useTheme();
   const [filter, setFilter] = useState({
     names: "",
     lastname: "",
     address: "",
-    dni: "",
+    alternative_address: "",
+    dni: 0,
     clase: "",
     locality: "",
     province: "",
@@ -83,20 +88,44 @@ export default function SearchScreen() {
     return () => backHandler.remove();
   }, [navigation]);
 
+  // Animación para filtros avanzados
+  useEffect(() => {
+    Animated.timing(slideAnimation, {
+      toValue: mostrarFiltros ? 1 : 0,
+      duration: 300,
+      useNativeDriver: false,
+    }).start();
+  }, [mostrarFiltros]);
+
   // Copiar datos al portapapeles
   const copiarAlPortapapeles = (item) => {
+    // Animación de feedback
+    Animated.sequence([
+      Animated.timing(scaleAnimation, {
+        toValue: 0.95,
+        duration: 100,
+        useNativeDriver: true,
+      }),
+      Animated.timing(scaleAnimation, {
+        toValue: 1,
+        duration: 100,
+        useNativeDriver: true,
+      }),
+    ]).start();
+
     const texto = `
       Apellido: ${item.lastname}
       Nombre: ${item.names}
       DNI: ${item.dni}
       Clase: ${item.clase}
       Domicilio: ${item.address}
+      Dirección Alternativa: ${item.alternative_address ?? "No especificada"}
       Localidad: ${item.locality}
       Provincia: ${item.province}
       Trabajo: ${item.work ?? "No especificado"}
     `;
     Clipboard.setStringAsync(texto);
-    ToastAndroid.show("Datos copiados al portapapeles", ToastAndroid.SHORT);
+    ToastAndroid.show("✅ Datos copiados al portapapeles", ToastAndroid.SHORT);
   };
 
   // Buscar datos
@@ -109,7 +138,7 @@ export default function SearchScreen() {
     if (Array.isArray(data) && data.length > 0) {
       setResultados(data);
     } else {
-      ToastAndroid.show("No se encontraron resultados", ToastAndroid.SHORT);
+      ToastAndroid.show("🔍 No se encontraron resultados", ToastAndroid.SHORT);
       console.log("No se encontraron resultados");
       setResultados([]);
     }
@@ -120,12 +149,15 @@ export default function SearchScreen() {
     setFilter((prevState) => ({ ...prevState, lastname }));
   const setNombre = (names) =>
     setFilter((prevState) => ({ ...prevState, names }));
-  const handleDniChange = (dni) => {
-    dniRef.current = dni;
-    setDni(dni);
-  };  
+  const handleDniChange = (value) => {
+    setDni(value);
+    setFilter((prev) => ({ ...prev, dni: value }));
+};
+
   const setDireccion = (address) =>
     setFilter((prevState) => ({ ...prevState, address }));
+  const setAlternativeAddress = (alternative_address) =>
+    setFilter((prevState) => ({ ...prevState, alternative_address }));
   const setClase = (clase) =>
     setFilter((prevState) => ({ ...prevState, clase }));
   const setLocalidad = (locality) =>
@@ -135,182 +167,540 @@ export default function SearchScreen() {
   const setTrabajo = (work) =>
     setFilter((prevState) => ({ ...prevState, work }));
 
-  return (
-    <KeyboardAvoidingView
-      behavior={Platform.OS === "ios" ? "padding" : "height"}
-      style={[styles.flexContainer, { backgroundColor: 'black' }]}
-      keyboardVerticalOffset={Platform.OS === "ios" ? 50 : - 50}
-    >
-      <View style={{ flex: 1 }}>
-      <FlatList
-        data={[{ id: "header", type: "header" }, ...resultados]}
-        keyExtractor={(item, index) => item.id || index.toString()}
-        contentContainerStyle={{ flexGrow: 1, paddingBottom: keyboardVisible ? 20 : 0 }}
-        ListHeaderComponent={
-          <Card style={styles.card} key={filter.dni}>
-            <Card.Title
-              title="Consulta de Personas"
-              subtitle="Ingrese los datos para buscar"
-            />
-            <Card.Content>
+  const limpiarFiltros = () => {
+    setFilter({
+      names: "",
+      lastname: "",
+      address: "",
+      alternative_address: "",
+      dni: "",
+      clase: "",
+      locality: "",
+      province: "",
+      work: "",
+    });
+    setDni("");
+    setResultados([]);
+    setCount(0);
+  };
+
+  const renderHeader = () => (
+    <Surface style={styles.headerContainer}>
+      {/* Header con gradiente */}
+      <View style={styles.headerGradient}>
+        <Text style={styles.headerTitle}>🔍 Consulta de Personas</Text>
+        <Text style={styles.headerSubtitle}>
+          Encuentra información detallada de manera rápida y segura
+        </Text>
+      </View>
+
+      {/* Formulario principal */}
+      <Card style={styles.mainCard}>
+        <Card.Content style={styles.cardContent}>
+          {/* Campos principales */}
+          <View style={styles.mainFieldsContainer}>
+            <Text style={styles.sectionTitle}>📋 Datos Principales</Text>
+            
+            <View style={styles.fieldRow}>
               <TextInput
-                label="Apellido"
+                label="👤 Apellido"
                 value={filter.lastname}
                 onChangeText={setApellido}
-                style={styles.input}
+                style={[styles.input, styles.halfWidth]}
                 mode="outlined"
+                theme={{ colors: { primary: '#3b82f6' } }}
               />
               <TextInput
-                label="Nombre"
+                label="✏️ Nombre"
                 value={filter.names}
                 onChangeText={setNombre}
-                style={styles.input}
+                style={[styles.input, styles.halfWidth]}
                 mode="outlined"
+                theme={{ colors: { primary: '#3b82f6' } }}
               />
+            </View>
+
+            <TextInput
+              label="🆔 DNI"
+              value={dni}
+              onChangeText={handleDniChange}
+              onBlur={() => {
+                setFilter((prev) => ({ ...prev, dni: dniRef.current }));
+              }}
+              style={styles.input}
+              keyboardType="numeric"
+              mode="outlined"
+              theme={{ colors: { primary: '#3b82f6' } }}
+            />
+          </View>
+
+          {/* Botón de filtros avanzados */}
+          <Button
+            mode="contained"
+            onPress={() => setMostrarFiltros(!mostrarFiltros)}
+            style={styles.filtroButton}
+            icon={mostrarFiltros ? "chevron-up" : "chevron-down"}
+            labelStyle={styles.buttonLabel}
+            contentStyle={styles.buttonContent}
+          >
+            {mostrarFiltros ? "Ocultar Filtros" : "Filtros Avanzados"}
+          </Button>
+
+          {/* Filtros avanzados con animación */}
+          <Animated.View
+            style={[
+              styles.filtrosContainer,
+              {
+                maxHeight: slideAnimation.interpolate({
+                  inputRange: [0, 1],
+                  outputRange: [0, 400],
+                }),
+                opacity: slideAnimation,
+              },
+            ]}
+          >
+            <Divider style={styles.divider} />
+            <Text style={styles.sectionTitle}>🎯 Filtros Avanzados</Text>
+            
+            <View style={styles.fieldRow}>
               <TextInput
-                label="DNI"
-                value={dni}
-                onChangeText={handleDniChange}
-                onBlur={()=>{
-                  setFilter((prev)=>({...prev, dni: dniRef.current}))
-                }}
-                style={styles.input}
+                label="📅 Clase"
+                value={filter.clase}
+                onChangeText={setClase}
+                style={[styles.input, styles.halfWidth]}
                 keyboardType="numeric"
                 mode="outlined"
+                theme={{ colors: { primary: '#3b82f6' } }}
               />
+              <TextInput
+                label="🏠 Dirección"
+                value={filter.address}
+                onChangeText={setDireccion}
+                style={[styles.input, styles.halfWidth]}
+                mode="outlined"
+                theme={{ colors: { primary: '#3b82f6' } }}
+              />
+            </View>
 
-              <Button
-                mode="contained"
-                onPress={() => setMostrarFiltros(!mostrarFiltros)}
-                style={styles.filtroButton}
-                icon={mostrarFiltros ? "chevron-up" : "chevron-down"}
-                labelStyle={{ color: "white" }}
-              >
-                Filtros Avanzados
-              </Button>
+            <View style={styles.fieldRow}>
+              <TextInput
+                label="🌍 Localidad"
+                value={filter.locality}
+                onChangeText={setLocalidad}
+                style={[styles.input, styles.halfWidth]}
+                mode="outlined"
+                theme={{ colors: { primary: '#3b82f6' } }}
+              />
+              <TextInput
+                label="🏛️ Provincia"
+                value={filter.province}
+                onChangeText={setProvincia}
+                style={[styles.input, styles.halfWidth]}
+                mode="outlined"
+                theme={{ colors: { primary: '#3b82f6' } }}
+              />
+            </View>
 
-              {mostrarFiltros && (
-                <View style={styles.filtrosContainer}>
-                  <Divider style={{ marginVertical: 10 }} />
-                  <TextInput
-                    label="Clase"
-                    value={filter.clase}
-                    onChangeText={setClase}
-                    style={styles.input}
-                    keyboardType="numeric"
-                    mode="outlined"
-                  />
-                  <TextInput
-                    label="Dirección"
-                    value={filter.address}
-                    onChangeText={setDireccion}
-                    style={styles.input}
-                    mode="outlined"
-                  />
-                  <TextInput
-                    label="Localidad"
-                    value={filter.locality}
-                    onChangeText={setLocalidad}
-                    style={styles.input}
-                    mode="outlined"
-                  />
-                  <TextInput
-                    label="Provincia"
-                    value={filter.province}
-                    onChangeText={setProvincia}
-                    style={styles.input}
-                    mode="outlined"
-                  />
-                  <TextInput
-                    label="Situación Laboral / Trabajo"
-                    value={filter.work}
-                    onChangeText={setTrabajo}
-                    style={styles.input}
-                    mode="outlined"
-                  />
+            <TextInput
+              label="💼 Situación Laboral / Trabajo"
+              value={filter.work}
+              onChangeText={setTrabajo}
+              style={styles.input}
+              mode="outlined"
+              theme={{ colors: { primary: '#3b82f6' } }}
+            />
+          </Animated.View>
+
+          {/* Botones de acción */}
+          <View style={styles.actionButtons}>
+            <Button
+              mode="contained"
+              style={styles.buscarButton}
+              icon="magnify"
+              onPress={buscarDatos}
+              disabled={loading}
+              labelStyle={styles.buttonLabel}
+              contentStyle={styles.buttonContent}
+            >
+              {loading ? (
+                <View style={styles.loadingContainer}>
+                  <ActivityIndicator animating={true} color="white" size="small" />
+                  <Text style={styles.loadingText}>Buscando...</Text>
+                </View>
+              ) : (
+                "🔍 Buscar"
+              )}
+            </Button>
+            
+            <Button
+              mode="outlined"
+              style={styles.limpiarButton}
+              icon="refresh"
+              onPress={limpiarFiltros}
+              labelStyle={styles.outlinedButtonLabel}
+              contentStyle={styles.buttonContent}
+            >
+              🧹 Limpiar
+            </Button>
+          </View>
+
+          {/* Contador de resultados */}
+          {count > 0 && (
+            <Surface style={styles.resultsCounter}>
+              <Text style={styles.counterText}>
+                ✅ {count} resultado{count > 1 ? 's' : ''} encontrado{count > 1 ? 's' : ''}
+              </Text>
+              {count >= 30 && (
+                <Text style={styles.limitText}>
+                  ⚠️ Se muestran máximo 30 resultados
+                </Text>
+              )}
+            </Surface>
+          )}
+        </Card.Content>
+      </Card>
+    </Surface>
+  );
+
+  const renderResultItem = ({ item }) => {
+    if (item.type === "header") return null;
+    
+    return (
+      <Animated.View style={{ transform: [{ scale: scaleAnimation }] }}>
+        <Card style={styles.resultCard}>
+          <Card.Content>
+            {/* Header del resultado */}
+            <View style={styles.resultHeader}>
+              <View style={styles.resultTitleContainer}>
+                <Text style={styles.resultName}>
+                  {item.lastname}, {item.names}
+                </Text>
+                <Badge style={styles.dniBadge}>
+                  DNI: {item.dni}
+                </Badge>
+              </View>
+              <IconButton
+                icon="content-copy"
+                size={20}
+                iconColor="#3b82f6"
+                onPress={() => copiarAlPortapapeles(item)}
+                style={styles.copyIcon}
+              />
+            </View>
+
+            {/* Información del resultado */}
+            <View style={styles.resultInfo}>
+              <View style={styles.infoRow}>
+                <Text style={styles.infoLabel}>📅 Clase:</Text>
+                <Text style={styles.infoValue}>{item.clase}</Text>
+              </View>
+              
+              <View style={styles.infoRow}>
+                <Text style={styles.infoLabel}>🏠 Domicilio:</Text>
+                <Text style={styles.infoValue}>{item.address}</Text>
+              </View>
+              
+              {item.alternative_address && (
+                <View style={styles.infoRow}>
+                  <Text style={styles.infoLabel}>📍 Dir. Alternativa:</Text>
+                  <Text style={styles.infoValue}>{item.alternative_address}</Text>
                 </View>
               )}
+              
+              <View style={styles.infoRow}>
+                <Text style={styles.infoLabel}>🌍 Localidad:</Text>
+                <Text style={styles.infoValue}>{item.locality}</Text>
+              </View>
+              
+              <View style={styles.infoRow}>
+                <Text style={styles.infoLabel}>🏛️ Provincia:</Text>
+                <Text style={styles.infoValue}>{item.province}</Text>
+              </View>
+              
+              <View style={styles.infoRow}>
+                <Text style={styles.infoLabel}>💼 Trabajo:</Text>
+                <Text style={styles.infoValue}>
+                  {item.work || "No especificado"}
+                </Text>
+              </View>
+            </View>
+          </Card.Content>
+        </Card>
+      </Animated.View>
+    );
+  };
 
-              <Button
-                mode="contained"
-                style={styles.buscarButton}
-                icon="magnify"
-                onPress={buscarDatos}
-                disabled={loading}
-                labelStyle={{ color: "white" }}
-              >
-                  {loading ? <ActivityIndicator animating={true} color="white" /> : "Buscar"}
-              </Button>
-            </Card.Content>
-            <Text style={{ color: "white", textAlign: "center", marginTop: 10 }}>
-              {count > 0 ? `Se encontraron ${count} resultados, recuerda que el limite es 30` : ""}
+return (
+      <KeyboardAvoidingView
+      behavior={Platform.OS === "ios" ? "padding" : "padding"} // cambiar height a padding
+      style={styles.container}
+      keyboardVerticalOffset={0}
+      >
+
+    <FlatList
+      ListHeaderComponent={
+        <ScrollView
+          keyboardShouldPersistTaps="handled"
+          showsVerticalScrollIndicator={false}
+        >
+          {renderHeader()}
+        </ScrollView>
+      }
+      data={resultados}
+      keyExtractor={(item, index) => item.id || index.toString()}
+      contentContainerStyle={[
+        styles.listContainer,
+        { paddingBottom: keyboardVisible ? 0 : 0, backgroundColor: "#0f172a"}
+      ]}
+      ListEmptyComponent={
+        resultados.length === 0 && count === 0 ? (
+          <View style={styles.emptyState}>
+            <Text style={styles.emptyIcon}>🔍</Text>
+            <Text style={styles.emptyText}>
+              Realiza una búsqueda para ver los resultados
             </Text>
-          </Card>
-        }
-        ListEmptyComponent={<Text style={styles.noResultados}>No hay resultados</Text>}
-        renderItem={({ item }) => {
-          if (item.type === "header") return null;
-          return (
-            <Card style={styles.resultadoCard}>
-              <Card.Title title={`${item.lastname}, ${item.names}`} subtitle={`DNI: ${item.dni}`} />
-              <Card.Content>
-                <Text>Clase: {item.clase}</Text>
-                <Text>Domicilio: {item.address}</Text>
-                <Text>Localidad: {item.locality}</Text>
-                <Text>Provincia: {item.province}</Text>
-                <Text>Trabajo: {item.work ?? "No especificado"}</Text>
-              </Card.Content>
-              <Card.Actions>
-                <Button icon="content-copy" mode="outlined" onPress={() => copiarAlPortapapeles(item)}>
-                  Copiar
-                </Button>
-              </Card.Actions>
-            </Card>
-          );
-        }}
-      />
-      </View>
-    </KeyboardAvoidingView>
-  );
+          </View>
+        ) : null
+      }
+      renderItem={renderResultItem}
+      keyboardShouldPersistTaps="handled"
+      showsVerticalScrollIndicator={false}
+      style={{ backgroundColor: "#0f172a", flex: 1 }}
+    />
+    
+  </KeyboardAvoidingView>
+);
+
 }
 
 const styles = StyleSheet.create({
-  flexContainer: {
+  container: {
     flex: 1,
-    marginTop: 0,
+    backgroundColor: "#0f172a",
     paddingTop: 30,
-    backgroundColor: "black",
-    marginBottom: 0,
-    paddingBottom: 0,
   },
-  card: {
-    paddingTop: 15,
-    paddingHorizontal: 10,
-    borderRadius: 10,
+  listContainer: {
+    flexGrow: 1,
+  },
+  headerContainer: {
+    backgroundColor: "transparent",
+    elevation: 0,
+    marginBottom: 10,
+  },
+  headerGradient: {
+    paddingHorizontal: 20,
+    paddingVertical: 20,
+    backgroundColor: "#1e293b",
+    borderBottomLeftRadius: 30,
+    borderBottomRightRadius: 30,
+    marginBottom: 20,
+  },
+  headerTitle: {
+    fontSize: 24,
+    fontWeight: "bold",
+    color: "#f1f5f9",
+    textAlign: "center",
+    marginBottom: 8,
+  },
+  headerSubtitle: {
+    fontSize: 14,
+    color: "#94a3b8",
+    textAlign: "center",
+    fontStyle: "italic",
+  },
+  mainCard: {
+    marginHorizontal: 16,
+    borderRadius: 20,
+    elevation: 8,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    backgroundColor: '#1e293b',
+  },
+  cardContent: {
+    padding: 20,
+  },
+  mainFieldsContainer: {
+    marginBottom: 20,
+  },
+  sectionTitle: {
+    fontSize: 16,
+    fontWeight: "600",
+    color: "#f1f5f9",
+    marginBottom: 15,
+    textAlign: "left",
+  },
+  fieldRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    gap: 12,
   },
   input: {
-    marginBottom: 15,
+    marginBottom: 16,
+    backgroundColor: 'rgba(148, 163, 184, 0.1)',
+    borderRadius: 12,
+  },
+  halfWidth: {
+    flex: 1,
   },
   filtroButton: {
-    marginTop: 10,
-    backgroundColor: "rgb(55, 58, 61)",
+    backgroundColor: "#475569",
+    borderRadius: 15,
+    elevation: 4,
+    shadowColor: '#475569',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.3,
+    shadowRadius: 4,
+    marginBottom: 10,
+  },
+  buttonLabel: {
+    color: "white",
+    fontSize: 16,
+    fontWeight: "600",
+  },
+  buttonContent: {
+    height: 48,
   },
   filtrosContainer: {
+    overflow: 'hidden',
     marginTop: 10,
+  },
+  divider: {
+    backgroundColor: "#374151",
+    height: 1,
+    marginVertical: 15,
+  },
+  actionButtons: {
+    flexDirection: "row",
+    gap: 12,
+    marginTop: 20,
   },
   buscarButton: {
+    flex: 2,
+    backgroundColor: "#3b82f6",
+    borderRadius: 15,
+    elevation: 6,
+    shadowColor: '#3b82f6',
+    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.4,
+    shadowRadius: 6,
+  },
+  limpiarButton: {
+    flex: 1,
+    borderColor: "#64748b",
+    borderWidth: 1,
+    borderRadius: 15,
+    backgroundColor: 'transparent',
+  },
+  outlinedButtonLabel: {
+    color: "#94a3b8",
+    fontSize: 14,
+    fontWeight: "600",
+  },
+  loadingContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  loadingText: {
+    color: 'white',
+    fontSize: 14,
+    fontWeight: '600',
+  },
+  resultsCounter: {
+    backgroundColor: "rgba(34, 197, 94, 0.15)",
+    borderRadius: 15,
+    padding: 12,
     marginTop: 20,
-    backgroundColor: "rgb(12, 69, 122)",
+    elevation: 2,
   },
-  noResultados: {
+  counterText: {
+    color: "#22c55e",
     textAlign: "center",
-    marginTop: 10,
-    color: "gray",
+    fontSize: 16,
+    fontWeight: "600",
   },
-  
-  resultadoCard: {
-    marginTop: 10,
-    paddingTop: 10,
+  limitText: {
+    color: "#f59e0b",
+    textAlign: "center",
+    fontSize: 12,
+    marginTop: 4,
+  },
+  keyboardSpacer: {
+  height: 100, 
+  backgroundColor: "#0f172a", 
+},
+
+  resultCard: {
+    marginHorizontal: 16,
+    marginBottom: 12,
+    borderRadius: 16,
+    elevation: 4,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.2,
+    shadowRadius: 4,
+    backgroundColor: '#1e293b',
+  },
+  resultHeader: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "flex-start",
+    marginBottom: 15,
+  },
+  resultTitleContainer: {
+    flex: 1,
+  },
+  resultName: {
+    fontSize: 18,
+    fontWeight: "bold",
+    color: "#f1f5f9",
+    marginBottom: 8,
+  },
+  dniBadge: {
+    backgroundColor: "#3b82f6",
+    color: "white",
+    alignSelf: "flex-start",
+  },
+  copyIcon: {
+    backgroundColor: "rgba(59, 130, 246, 0.1)",
+    borderRadius: 8,
+  },
+  resultInfo: {
+    gap: 8,
+  },
+  infoRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    paddingVertical: 4,
+  },
+  infoLabel: {
+    fontSize: 14,
+    color: "#94a3b8",
+    fontWeight: "500",
+    minWidth: 120,
+  },
+  infoValue: {
+    fontSize: 14,
+    color: "#f1f5f9",
+    flex: 1,
+    marginLeft: 8,
+  },
+  emptyState: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 60,
+    paddingHorizontal: 40,
+  },
+  emptyIcon: {
+    fontSize: 48,
+    marginBottom: 16,
+  },
+  emptyText: {
+    fontSize: 16,
+    color: "#94a3b8",
+    textAlign: "center",
+    fontStyle: "italic",
   },
 });
-

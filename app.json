@@ -5,7 +5,7 @@
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/iconApp.png",
-    "userInterfaceStyle": "light",
+    "userInterfaceStyle": "dark",
     "newArchEnabled": true,
     "splash": {
       "image": "./assets/splash-icon.png",
@@ -25,13 +25,7 @@
     "android": {
       "adaptiveIcon": {
         "foregroundImage": "./assets/adaptive-icon.png",
-        "backgroundColor": "#ffffff",
-        "permissions": [
-          "READ_EXTERNAL_STORAGE",
-          "WRITE_EXTERNAL_STORAGE",
-          "READ_EXTERNAL_STORAGE",
-          "WRITE_EXTERNAL_STORAGE"
-        ]
+        "backgroundColor": "#ffffff"
       },
       "package": "com.GabrielAcosta.PadronARG"
     },
@@ -46,9 +40,7 @@
         "projectId": "5e201922-30ed-41be-b937-b96100e4cbd0"
       }
     },
-    "runtimeVersion": {
-      "policy": "appVersion"
-    },
+    "runtimeVersion": "1.0.1",
     "updates": {
       "url": "https://u.expo.dev/5e201922-30ed-41be-b937-b96100e4cbd0"
     }

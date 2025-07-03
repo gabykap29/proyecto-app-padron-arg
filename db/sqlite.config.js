@@ -49,6 +49,8 @@ const closeDatabase = async (db) => {
 };
 
 export const findPerson = async (filters, keepOpen = false) => {
+  console.log('Buscando persona con filtros:', filters);
+  
   const db = await openDataBase();
   try {
     let query = "SELECT * FROM padron WHERE 1=1";
